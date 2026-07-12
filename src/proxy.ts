@@ -42,7 +42,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isAuthRoute && isLoggedIn) {
+  if (isAuthRoute && isLoggedIn && process.env.NODE_ENV !== 'development') {
     return NextResponse.redirect(new URL('/dashboard', request.nextUrl.origin));
   }
 
