@@ -1,0 +1,260 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+  INCOMPLETE
+}
+
+enum ContractStatus {
+  ACTIVE
+  EXPIRED
+  NEEDS_REVIEW
+  DRAFT
+}
+
+enum AlertStatus {
+  UPCOMING
+  SENT
+  OVERDUE
+  DISMISSED
+}
+
+enum JobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+  passwordHash  String?   @map("password_hash")
+  role          UserRole  @default(USER)
+  tier          SubscriptionTier @default(FREE)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  accounts      Account[]
+  sessions      Session[]
+  contracts     Contract[]
+  chatSessions  ChatSession[]
+  subscription  Subscription?
+  auditLogs     AuditLog[]
+  alerts        Alert[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email])
+  @@map("password_reset_tokens")
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique @map("user_id")
+  stripeCustomerId     String?            @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
+  stripePriceId        String?            @map("stripe_price_id")
+  tier                 SubscriptionTier   @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime?          @map("current_period_start")
+  currentPeriodEnd     DateTime?          @map("current_period_end")
+  cancelAtPeriodEnd    Boolean            @default(false) @map("cancel_at_period_end")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model Contract {
+  id               String         @id @default(cuid())
+  userId           String         @map("user_id")
+  title            String
+  type             String         @default("Vendor Agreement")
+  status           ContractStatus @default(NEEDS_REVIEW)
+  content          String         @db.Text
+  parties          String[]
+  effectiveDate    DateTime?      @map("effective_date")
+  expirationDate   DateTime?      @map("expiration_date")
+  renewalDate      DateTime?      @map("renewal_date")
+  autoRenewal      Boolean        @default(false) @map("auto_renewal")
+  noticePeriodDays Int            @default(30) @map("notice_period_days")
+  paymentTerms     String         @default("Net 30") @map("payment_terms")
+  paymentAmount    Decimal        @default(0) @map("payment_amount") @db.Decimal(15, 2)
+  paymentFrequency String         @default("One-time") @map("payment_frequency")
+  obligations      Json           @default("[]")
+  keyClauses       Json           @default("{}") @map("key_clauses")
+  fileUrl          String?        @map("file_url")
+  fileName         String?        @map("file_name")
+  embedding        Float[]
+  uploadedAt       DateTime       @default(now()) @map("uploaded_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alerts Alert[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([expirationDate])
+  @@map("contracts")
+}
+
+model Alert {
+  id         String      @id @default(cuid())
+  userId     String      @map("user_id")
+  contractId String      @map("contract_id")
+  alertType  String      @map("alert_type")
+  dueDate    DateTime    @map("due_date")
+  status     AlertStatus @default(UPCOMING)
+  sentAt     DateTime?   @map("sent_at")
+  message    String      @db.Text
+  daysBefore Int         @default(30) @map("days_before")
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([contractId])
+  @@index([dueDate])
+  @@index([status])
+  @@map("alerts")
+}
+
+model ChatSession {
+  id        String        @id @default(cuid())
+  userId    String        @map("user_id")
+  title     String        @default("New Chat")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([userId])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  role      String
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("chat_messages")
+}
+
+model UploadJob {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  type       String    @default("document")
+  status     JobStatus @default(QUEUED)
+  progress   Int       @default(0)
+  statusText String?   @map("status_text")
+  data       Json      @default("{}")
+  error      String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([status])
+  @@map("upload_jobs")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  @map("user_id")
+  action    String
+  entity    String
+  entityId  String?  @map("entity_id")
+  metadata  Json     @default("{}")
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
