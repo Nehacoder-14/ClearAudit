@@ -56,13 +56,13 @@ export default function PricingPage() {
           </Link>
           <div className="flex items-center gap-4">
             <Link
-              href="/dashboard"
+              href="/login"
               className="text-sm font-medium text-[#5C5651] hover:text-[#4B1218] px-4 py-2 rounded-lg transition-colors"
             >
-              Dashboard
+              Log In
             </Link>
             <Link
-              href="/dashboard"
+              href="/signup"
               className="flex items-center gap-1.5 bg-[#4B1218] hover:bg-[#8B2635] text-[#FAF7F2] text-sm font-medium px-4 py-2 rounded-lg transition-colors"
             >
               Get Started
