@@ -1,6 +1,21 @@
 # ClearAudit
 
-AI-powered contract intelligence SaaS platform. Upload contracts, extract key terms with Claude AI, search semantically, chat with your portfolio, and never miss a renewal deadline.
+**AI-powered contract intelligence SaaS platform.** Upload contracts, extract key terms with Claude AI, search semantically, chat with your portfolio, and never miss a renewal deadline.
+
+**Live:** [https://clearaudit-zeta.vercel.app](https://clearaudit-zeta.vercel.app)
+
+---
+
+## Screenshots
+
+### Landing Page
+![Landing Page](public/screenshots/landing.png)
+
+### Dashboard
+![Dashboard](public/screenshots/dashboard.png)
+
+### Contract Viewer — Extracted Terms Manager
+![Contract Viewer](public/screenshots/contract-viewer.png)
 
 ## Tech Stack
 
