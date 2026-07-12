@@ -6,17 +6,6 @@
 
 ---
 
-## Screenshots
-
-### Landing Page
-![Landing Page](public/screenshots/landing.png)
-
-### Dashboard
-![Dashboard](public/screenshots/dashboard.png)
-
-### Contract Viewer — Extracted Terms Manager
-![Contract Viewer](public/screenshots/contract-viewer.png)
-
 ## Tech Stack
 
 | Layer | Technology |
